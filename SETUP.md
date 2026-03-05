@@ -2,6 +2,9 @@
 
 Step-by-step instructions for local development, Docker, and CI/CD configuration.
 
+> **Want to run against real provider names right now?**
+> See [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md) for a complete end-to-end walkthrough on macOS and Windows.
+
 ---
 
 ## Prerequisites

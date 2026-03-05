@@ -208,6 +208,10 @@ uv run mypy credentialing/ --ignore-missing-imports
 
 ---
 
+## Local Testing with Real Providers
+
+See [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md) for a complete walkthrough — running the CLI against real provider names on macOS and Windows, batch processing a CSV, Docker local run, interpreting results, and troubleshooting.
+
 ## Deployment
 
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for full AWS (ECS Fargate) and GCP (Cloud Run) instructions.
