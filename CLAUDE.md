@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AI-powered healthcare provider credentialing system. Python 3.12, managed with `uv`.
 
+**Repository:** https://github.com/rbalusup/provider-credentialing
+
 **Core idea:** Given a provider's name/NPI/license, crawl medical board sites + OIG/NPDB, extract structured credential data using Claude, detect sanctions, and normalize everything into a report.
 
 ## Architecture
