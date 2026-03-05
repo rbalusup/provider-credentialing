@@ -1,0 +1,94 @@
+name: Deploy → GCP (Cloud Run)
+
+# Trigger: push a tag like v1.2.3, or manually via the Actions UI
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "staging"
+        type: choice
+        options: [staging, production]
+
+env:
+  GCP_REGION: us-central1                            # change to your region
+  GCP_PROJECT_ID: your-gcp-project-id                # set this
+  AR_REPOSITORY: provider-credentialing              # Artifact Registry repo name
+  IMAGE_NAME: provider-credentialing
+  CLOUD_RUN_SERVICE: provider-credentialing          # Cloud Run service name
+
+jobs:
+  deploy:
+    name: Build, push, and deploy
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+
+    # Allows the job to request a short-lived OIDC token (keyless auth)
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── 1. Authenticate to GCP (Workload Identity Federation — no JSON key) ──
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account:            ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      # ── 2. Set up gcloud CLI ──────────────────────────────────────────────
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # ── 3. Configure Docker to push to Artifact Registry ─────────────────
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      # ── 4. Build and push image ───────────────────────────────────────────
+      - name: Build and push image
+        id: build-image
+        env:
+          IMAGE_URI: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.AR_REPOSITORY }}/${{ env.IMAGE_NAME }}
+        run: |
+          docker build -t $IMAGE_URI:${{ github.sha }} .
+          docker tag $IMAGE_URI:${{ github.sha }} $IMAGE_URI:latest
+          docker push $IMAGE_URI:${{ github.sha }}
+          docker push $IMAGE_URI:latest
+          echo "image_uri=$IMAGE_URI:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      # ── 5. Deploy to Cloud Run ────────────────────────────────────────────
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.CLOUD_RUN_SERVICE }}
+          region:  ${{ env.GCP_REGION }}
+          image:   ${{ steps.build-image.outputs.image_uri }}
+          env_vars: |
+            ENVIRONMENT=${{ github.event.inputs.environment || 'staging' }}
+            LOG_FORMAT=json
+          # Secrets injected from Secret Manager (recommended over plain env vars)
+          secrets: |
+            ANTHROPIC_API_KEY=anthropic-api-key:latest
+          flags: |
+            --max-instances=10
+            --min-instances=0
+            --memory=1Gi
+            --cpu=1
+            --timeout=300
+            --concurrency=4
+
+      - name: Deployment summary
+        run: |
+          echo "## GCP Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | ${{ steps.build-image.outputs.image_uri }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Service URL | ${{ steps.deploy.outputs.url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Region | ${{ env.GCP_REGION }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ github.event.inputs.environment || 'staging' }} |" >> $GITHUB_STEP_SUMMARY

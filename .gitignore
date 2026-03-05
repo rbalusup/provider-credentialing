@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[oc]
+*.pyo
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build / packaging
+build/
+dist/
+wheels/
+*.egg-info/
+
+# Virtual environments
+.venv/
+
+# Environment — NEVER commit real secrets
+.env
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# macOS
+.DS_Store
+
+# Project outputs
+*.db
+provider_credentialing.db
+*_results.json
+
+# Scrapy
+.scrapy/

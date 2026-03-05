@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main", "develop"]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Lint (ruff)
+        run: uv run ruff check credentialing/ tests/ examples/
+
+      - name: Format check (black)
+        run: uv run black --check credentialing/ tests/ examples/
+
+      - name: Type check (mypy)
+        run: uv run mypy credentialing/ --ignore-missing-imports
+        continue-on-error: true   # advisory until type coverage is complete
+
+      - name: Run tests with coverage
+        env:
+          # Tests mock all external calls; a placeholder key is enough
+          ANTHROPIC_API_KEY: sk-ant-placeholder
+        run: uv run pytest tests/ -v --cov=credentialing --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+
+  docker-build:
+    name: Docker build (smoke test)
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t provider-credentialing:ci .
