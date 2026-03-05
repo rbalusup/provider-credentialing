@@ -2,7 +2,7 @@
 
 import json
 import time
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 from anthropic import Anthropic, APIError, RateLimitError
 from tenacity import (
     retry,
@@ -12,10 +12,6 @@ from tenacity import (
 )
 from credentialing.logging_config import get_logger
 from credentialing.config import settings
-from credentialing.models import (
-    ClaudeExtractionRequest,
-    ClaudeExtractionResponse,
-)
 
 logger = get_logger(__name__)
 

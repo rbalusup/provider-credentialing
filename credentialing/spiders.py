@@ -2,7 +2,6 @@
 
 import scrapy
 from scrapy import Request
-from typing import Optional, Dict, Any
 from urllib.parse import urljoin, quote
 from credentialing.logging_config import get_logger
 

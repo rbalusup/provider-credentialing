@@ -3,10 +3,10 @@
 import asyncio
 import json
 import typer
-from typing import Optional, List
+from typing import Optional
 from rich.console import Console
 from rich.table import Table
-from credentialing.models import Provider, CredentialStatus, ExtractionStatus
+from credentialing.models import Provider, ExtractionStatus
 from credentialing.orchestrator import CredentialingOrchestrator
 from credentialing.logging_config import setup_logging, get_logger
 from credentialing.config import settings
@@ -314,7 +314,6 @@ def _display_table_results(task) -> None:
 
 def _display_json_results(task) -> None:
     """Display credentialing results in JSON format."""
-    import json
 
     result = {
         "status": str(task.status),

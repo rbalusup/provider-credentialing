@@ -10,7 +10,7 @@ This script shows how to:
 
 import asyncio
 import json
-from credentialing.models import Provider, CredentialingTask, ExtractionStatus
+from credentialing.models import Provider, ExtractionStatus
 from credentialing.claude_extractor import ClaudeExtractor
 from credentialing.scraper import WebScraper, ScraperStatus
 from credentialing.orchestrator import CredentialingOrchestrator
@@ -202,7 +202,7 @@ async def example_5_full_pipeline():
 
         if task.normalized_data:
             summary = task.normalized_data.get("summary", {})
-            print(f"\nSummary:")
+            print("\nSummary:")
             print(f"  Total Credentials: {summary.get('total_credentials', 0)}")
             print(f"  Requires Review: {summary.get('requires_review', False)}")
 
@@ -242,7 +242,7 @@ async def example_6_batch_processing():
         except Exception as e:
             print(f"  Error: {str(e)}")
 
-    print(f"\n✓ Batch processing complete!")
+    print("\n✓ Batch processing complete!")
     print(f"  Processed: {len(results)} providers")
     successful = sum(1 for t in results if t.status == ExtractionStatus.SUCCESS)
     print(f"  Successful: {successful}")

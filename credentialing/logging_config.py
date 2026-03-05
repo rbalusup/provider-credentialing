@@ -3,7 +3,6 @@
 import logging
 import structlog
 import sys
-from typing import Any
 
 
 def setup_logging(log_level: str = "INFO", log_format: str = "json") -> None:

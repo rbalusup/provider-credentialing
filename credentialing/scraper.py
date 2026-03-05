@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-from typing import Optional, Dict, Any, List, Callable
+from typing import Optional, Dict, List
 from dataclasses import dataclass
 from enum import Enum
 import httpx
@@ -316,7 +316,6 @@ class SeleniumScraper:
             Rendered HTML or None
         """
         try:
-            from selenium.webdriver.chrome.service import Service
             from selenium.webdriver.chrome.options import Options
 
             logger.info("fetching_with_selenium", url=url)
