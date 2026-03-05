@@ -1,369 +1,253 @@
-# Installation & Setup Guide
+# Setup Guide
+
+Step-by-step instructions for local development, Docker, and CI/CD configuration.
+
+---
 
 ## Prerequisites
 
-Ensure you have the following installed:
+| Tool | Version | Install |
+|------|---------|---------|
+| Python | 3.12+ | `brew install python@3.12` or [python.org](https://python.org) |
+| uv | latest | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| Git | any | `brew install git` |
+| Docker | 24+ | [docker.com](https://www.docker.com/get-started/) *(optional, for container builds)* |
+| Anthropic API key | — | [console.anthropic.com](https://console.anthropic.com) |
 
-1. **Python 3.11 or higher**
-   ```bash
-   python --version
-   ```
+---
 
-2. **UV Package Manager**
-   ```bash
-   # Install UV (single command)
-   curl -LsSf https://astral.sh/uv/install.sh | sh
+## Local Development Setup
 
-   # Or using pip
-   pip install uv
-
-   # Verify installation
-   uv --version
-   ```
-
-3. **Anthropic API Key**
-   - Get from https://console.anthropic.com
-   - Required for Claude API integration
-
-## Installation Steps
-
-### 1. Clone/Create Project
+### 1. Clone the repository
 
 ```bash
-# Navigate to project directory
-cd provider_credentialing
+git clone git@github.com:rbalusup/provider-credentialing.git
+cd provider-credentialing
 ```
 
-### 2. Create Environment File
+### 2. Create your environment file
 
 ```bash
-# Copy example environment file
 cp .env.example .env
-
-# Edit .env with your API key
-# ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
-### 3. Install Dependencies with UV
-
-```bash
-# Install all dependencies
-uv sync
-
-# This will:
-# - Create virtual environment
-# - Install all dependencies from pyproject.toml
-# - Install dev dependencies
-```
-
-### 4. Verify Installation
-
-```bash
-# Check Python version
-uv run python --version
-
-# Check installed packages
-uv run pip list | grep anthropic
-
-# Test CLI
-uv run provider-credentialing --help
-```
-
-## Project Structure
-
-```
-provider_credentialing/
-├── .env                              # Configuration (create from .env.example)
-├── .env.example                      # Example configuration
-├── pyproject.toml                    # Project metadata & dependencies
-├── README.md                         # Main documentation
-├── SETUP.md                          # This file
-│
-├── credentialing/                    # Main package
-│   ├── __init__.py
-│   ├── cli.py                        # CLI commands
-│   ├── config.py                     # Configuration management
-│   ├── logging_config.py             # Logging setup
-│   ├── models.py                     # Data models
-│   ├── claude_extractor.py           # Claude API integration
-│   ├── scraper.py                    # Web scraping
-│   ├── spiders.py                    # Scrapy spiders
-│   └── orchestrator.py               # Pipeline orchestration
-│
-├── examples/                         # Example scripts & data
-│   ├── usage_examples.py             # Usage examples
-│   ├── providers.csv                 # Sample batch data
-│   └── scrapy_settings.py            # Scrapy configuration
-│
-├── tests/                            # Test suite
-│   ├── __init__.py
-│   ├── test_models.py
-│   ├── test_claude_extractor.py
-│   ├── test_scraper.py
-│   └── test_orchestrator.py
-│
-└── docs/                             # Documentation
-    ├── API.md                        # API documentation
-    ├── ARCHITECTURE.md               # System architecture
-    └── DEPLOYMENT.md                 # Deployment guide
-```
-
-## Quick Start
-
-### 1. Single Provider Credentialing
-
-```bash
-uv run provider-credentialing credentialize \
-    --first-name John \
-    --last-name Doe \
-    --npi 1234567890 \
-    --state CA
-```
-
-### 2. Check Exclusions
-
-```bash
-uv run provider-credentialing check-exclusions \
-    --first-name Jane \
-    --last-name Smith
-```
-
-### 3. Run Examples
-
-```bash
-# Run usage examples
-uv run python examples/usage_examples.py
-
-# Run with output to file
-uv run python examples/usage_examples.py > examples/output.log
-```
-
-### 4. Run Tests
-
-```bash
-# Run all tests
-uv run pytest
-
-# Run with coverage
-uv run pytest --cov=credentialing
-
-# Run specific test file
-uv run pytest tests/test_models.py -v
-```
-
-## Configuration
-
-### Environment Variables
-
-Edit `.env` file:
+Edit `.env` and set at minimum:
 
 ```env
-# Claude API
-ANTHROPIC_API_KEY=sk-ant-your-key-here
-CLAUDE_MODEL=claude-3-5-sonnet-20241022
-MAX_TOKENS=2048
-TEMPERATURE=0.0
-
-# Web Crawling
-CRAWL_TIMEOUT=30
-MAX_RETRIES=3
-REQUESTS_PER_SECOND=2
-CONCURRENT_REQUESTS=4
-
-# Logging
-LOG_LEVEL=INFO
-LOG_FORMAT=json
-
-# System
-DEBUG=false
-ENVIRONMENT=development
+ANTHROPIC_API_KEY=sk-ant-your-real-key-here
 ```
+
+> `.env` is gitignored — it will never be committed.
+
+### 3. Install dependencies
+
+```bash
+uv sync        # installs all deps including dev tools
+```
+
+uv automatically creates a `.venv` and resolves from `uv.lock` for reproducible installs.
+
+### 4. Verify the setup
+
+```bash
+uv run provider-credentialing --help     # CLI works
+uv run pytest tests/ -q                  # 53 tests pass
+```
+
+---
 
 ## Development Workflow
 
-### 1. Install Dev Dependencies
+### Running the CLI
 
 ```bash
-# Install includes dev dependencies
-uv sync
+# Single provider
+uv run provider-credentialing credentialize \
+    --first-name John --last-name Doe --state CA
 
-# Or explicitly
-uv sync --group dev
+# Show current config
+uv run provider-credentialing config-show
+
+# Batch processing
+uv run provider-credentialing batch-process examples/providers.csv
 ```
 
-### 2. Code Formatting
+### Running tests
 
 ```bash
-# Format code with Black
-uv run black credentialing/
-
-# Format examples
-uv run black examples/
+uv run pytest tests/ -v                              # all tests, verbose
+uv run pytest tests/test_models.py -v                # one file
+uv run pytest tests/ --cov=credentialing             # with coverage
+uv run pytest tests/ --cov=credentialing \
+    --cov-report=html                                # HTML report → htmlcov/
 ```
 
-### 3. Linting
+### Linting and formatting
 
 ```bash
-# Check with Ruff
-uv run ruff check credentialing/
-
-# Auto-fix issues
-uv run ruff check --fix credentialing/
+uv run ruff check credentialing/ tests/              # lint
+uv run ruff check --fix credentialing/ tests/        # auto-fix
+uv run black credentialing/ tests/ examples/         # format
+uv run mypy credentialing/ --ignore-missing-imports  # type check
 ```
 
-### 4. Type Checking
+### Adding dependencies
 
 ```bash
-# Check types with mypy
-uv run mypy credentialing/
+uv add httpx                  # production dependency
+uv add --dev pytest-mock      # dev-only dependency
 ```
 
-### 5. Running Tests
+---
+
+## Docker
+
+### Build the image
 
 ```bash
-# Run all tests
-uv run pytest
-
-# Run with verbose output
-uv run pytest -v
-
-# Run specific test
-uv run pytest tests/test_models.py::test_provider_creation -v
-
-# Run with coverage report
-uv run pytest --cov=credentialing --cov-report=html
+docker build -t provider-credentialing:local .
 ```
+
+### Run the CLI via Docker
+
+```bash
+docker run --rm \
+    -e ANTHROPIC_API_KEY=sk-ant-xxx \
+    provider-credentialing:local \
+    credentialize --first-name John --last-name Doe --state CA
+```
+
+### Run with a `.env` file
+
+```bash
+docker run --rm \
+    --env-file .env \
+    provider-credentialing:local \
+    config-show
+```
+
+### Docker image details
+
+- **Base:** `python:3.12-slim`
+- **Multi-stage build** — builder installs deps, runtime copies only the venv
+- **Chromium included** — required by `SeleniumScraper` for JS-heavy sites
+- **Non-root user** — runs as `appuser` for security
+
+---
+
+## CI/CD Overview
+
+Three GitHub Actions workflows are in `.github/workflows/`:
+
+| Workflow | File | Trigger |
+|----------|------|---------|
+| CI (lint + test + docker build) | `ci.yml` | Every push to `main`/`develop`, every PR |
+| Deploy to AWS ECS Fargate | `deploy-aws.yml` | Tag push (`v*.*.*`) or manual |
+| Deploy to GCP Cloud Run | `deploy-gcp.yml` | Tag push (`v*.*.*`) or manual |
+
+### Secrets required in GitHub → Settings → Secrets
+
+**For AWS:**
+
+| Secret | Description |
+|--------|-------------|
+| `AWS_ACCESS_KEY_ID` | IAM user access key with ECR + ECS permissions |
+| `AWS_SECRET_ACCESS_KEY` | IAM user secret key |
+| `ANTHROPIC_API_KEY` | Injected into ECS task at runtime |
+
+**For GCP:**
+
+| Secret | Description |
+|--------|-------------|
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | WIF provider URI (keyless auth) |
+| `GCP_SERVICE_ACCOUNT` | Service account email for deployments |
+
+The `ANTHROPIC_API_KEY` for GCP is stored in **Secret Manager** (not a GitHub secret) and referenced as `anthropic-api-key:latest` in the workflow. This is the recommended approach.
+
+### Release a new version
+
+```bash
+# Bump version in pyproject.toml, then:
+git add pyproject.toml
+git commit -m "chore: bump version to v1.1.0"
+git tag v1.1.0
+git push origin main --tags
+```
+
+Both deploy workflows will trigger automatically.
+
+---
+
+## Environment Details
+
+### `.env` variables
+
+See `.env.example` for the full list. Key variables:
+
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | **Required.** Your Claude API key |
+| `CLAUDE_MODEL` | Model ID (default: `claude-3-5-sonnet-20241022`) |
+| `LOG_FORMAT` | `json` for production, `text` for local dev |
+| `ENVIRONMENT` | `development` / `staging` / `production` |
+| `ENABLE_BROWSER_AUTOMATION` | `true` enables Selenium for JS-heavy sites |
+
+### Python version
+
+The project pins Python 3.12 in `.python-version`. uv respects this automatically.
+
+---
 
 ## Troubleshooting
 
-### Issue: "command not found: uv"
+### `command not found: uv`
 
-**Solution**: Ensure UV is installed and in PATH
 ```bash
-# Install UV
 curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Add to PATH (if needed)
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"   # add to ~/.zshrc or ~/.bashrc
 ```
 
-### Issue: "ModuleNotFoundError: No module named 'anthropic'"
+### `ANTHROPIC_API_KEY not found` or `ValidationError`
 
-**Solution**: Reinstall dependencies
 ```bash
-uv sync --force
+# Confirm .env exists and has the key
+grep ANTHROPIC_API_KEY .env
 ```
 
-### Issue: "ANTHROPIC_API_KEY not found"
+### `ModuleNotFoundError`
 
-**Solution**: Create and configure `.env` file
 ```bash
-cp .env.example .env
-# Edit .env and add your API key
-cat .env | grep ANTHROPIC_API_KEY
+uv sync --force    # force-reinstall all dependencies
 ```
 
-### Issue: "Python version too old"
+### Selenium / ChromeDriver issues
 
-**Solution**: Update Python to 3.11+
-```bash
-# Check current version
-python --version
-
-# Install Python 3.11+ (macOS with Homebrew)
-brew install python@3.11
-
-# Or use pyenv
-pyenv install 3.11.0
-pyenv global 3.11.0
-```
-
-### Issue: Selenium/Browser automation not working
-
-**Solution**: Install Chrome and Selenium
 ```bash
 # macOS
 brew install chromium
 
-# Or use playwright
-uv run playwright install
+# Linux (in Docker)
+# Already handled in the Dockerfile (apt-get install chromium chromium-driver)
 ```
 
-## Database Setup (Optional)
+### Tests failing with real network calls
 
-For production with PostgreSQL:
+All tests mock external calls. If you see real HTTP requests in tests, a mock is missing. Check that the test patches `credentialing.claude_extractor.Anthropic` and `credentialing.scraper.WebScraper`.
+
+---
+
+## Useful One-liners
 
 ```bash
-# Install PostgreSQL
-brew install postgresql
+# Check config loaded from .env
+uv run python -c "from credentialing.config import settings; print(settings.model_dump())"
 
-# Create database
-createdb provider_credentialing
+# Run examples (requires valid ANTHROPIC_API_KEY)
+uv run python examples/usage_examples.py
 
-# Update .env
-DATABASE_URL=postgresql://user:password@localhost:5432/provider_credentialing
+# Watch tests on file change (requires watchdog)
+uv run ptw tests/ credentialing/
+
+# Generate HTML coverage report
+uv run pytest tests/ --cov=credentialing --cov-report=html && open htmlcov/index.html
 ```
-
-## Docker Setup (Optional)
-
-```bash
-# Build image
-docker build -t provider-credentialing .
-
-# Run container
-docker run -e ANTHROPIC_API_KEY=sk-ant-xxx provider-credentialing
-```
-
-## Next Steps
-
-1. **Read the README**: Full feature documentation
-2. **Review Examples**: See `examples/usage_examples.py`
-3. **Check Architecture**: Understand system design
-4. **Explore CLI**: Run `uv run provider-credentialing --help`
-5. **Review Tests**: See `tests/` directory
-
-## Support & Documentation
-
-- **Main Docs**: `README.md`
-- **API Docs**: `docs/API.md`
-- **Architecture**: `docs/ARCHITECTURE.md`
-- **Deployment**: `docs/DEPLOYMENT.md`
-
-## Common Commands
-
-```bash
-# Show help
-uv run provider-credentialing --help
-
-# Show version
-uv run provider-credentialing --version
-
-# Run in debug mode
-DEBUG=true uv run provider-credentialing credentialize ...
-
-# Run with different log level
-LOG_LEVEL=DEBUG uv run provider-credentialing ...
-
-# Run with custom config
-uv run python -c "from credentialing.config import settings; print(settings)"
-```
-
-## Success Indicators
-
-✅ After successful setup:
-
-1. `uv run provider-credentialing --help` works
-2. `.env` file exists with API key
-3. `uv run pytest` runs all tests
-4. `uv run python examples/usage_examples.py` executes
-5. No import errors when running commands
-
-## Getting Help
-
-If you encounter issues:
-
-1. Check `.env` file configuration
-2. Verify Python version (3.11+)
-3. Try `uv sync --force` to reinstall
-4. Check logs for error messages
-5. Review example scripts for usage patterns
